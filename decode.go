@@ -7,8 +7,16 @@ import (
 )
 
 type Opts struct {
+	// EnableEscapeSeq value of true allows numbers inside escape sequences as parts of decodable strings.
+	//
+	// Examples:
+	// "..a#3" => "..a3"
+	// "#3#4#5" => "345"
+	// "..a#a" => error as an incorrect escape sequence
 	EnableEscapeSeq bool
-	EscapeChar      rune
+
+	// EscapeChar is the char used to start escape sequence. Default: '#'.
+	EscapeChar rune
 }
 
 type Decoder struct {
@@ -51,7 +59,6 @@ func (d *Decoder) DecodeRunes(encoded []rune) (string, error) {
 		r := encoded[i]
 
 		if unicode.IsDigit(r) {
-			// NOTE: or repeat?
 			value, advance := d.parseMultiplier(encoded, i)
 			if value == 0 {
 				return "", fmt.Errorf("zero multiplier is not allowed")
@@ -96,6 +103,11 @@ func (d *Decoder) DecodeRunes(encoded []rune) (string, error) {
 	}
 
 	return b.String(), nil
+}
+
+func Decode(encoded string, opts ...func(*Opts)) (string, error) {
+	d := NewDecoder(opts...)
+	return d.DecodeRunes([]rune(encoded))
 }
 
 // parseMultiplier must be called with encoded[start] being a digit
